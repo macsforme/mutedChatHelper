@@ -198,7 +198,7 @@ void mutedChatHelper::Event(bz_EventData *eventData) {
 	}
 }
 
-bool mutedChatHelper::SlashCommand(int playerID, int sourceChannel, bz_ApiString command, bz_ApiString message, bz_APIStringList* params) {
+bool mutedChatHelper::SlashCommand(int playerID, int sourceChannel, bz_ApiString command, bz_ApiString /* message */, bz_APIStringList* params) {
 	if(command == "hello" || command == "hi") {
 		if(params->size() == 0) {
 			sendForcedTextMessage(playerID, sourceChannel, "Hello");
@@ -224,11 +224,11 @@ bool mutedChatHelper::SlashCommand(int playerID, int sourceChannel, bz_ApiString
 			long int duration = strtol(params->get(0).c_str(), NULL, 10);
 
 			if(duration == 15 || duration == 20 || duration == 30) {
-				std::stringstream message;
+				std::stringstream strStream;
 
-				message << "I can play a " << duration << "-minute fun match";
+				strStream << "I can play a " << duration << "-minute fun match";
 
-				sendForcedTextMessage(playerID, sourceChannel, message.str().c_str());
+				sendForcedTextMessage(playerID, sourceChannel, strStream.str().c_str());
 			} else {
 				bz_sendTextMessage(BZ_SERVER, playerID, "Incorrect match duration.");
 			}
@@ -244,11 +244,11 @@ bool mutedChatHelper::SlashCommand(int playerID, int sourceChannel, bz_ApiString
 			long int duration = strtol(params->get(0).c_str(), NULL, 10);
 
 			if(duration == 15 || duration == 20 || duration == 30) {
-				std::stringstream message;
+				std::stringstream strStream;
 
-				message << "I can play a " << duration << "-minute official match";
+				strStream << "I can play a " << duration << "-minute official match";
 
-				sendForcedTextMessage(playerID, sourceChannel, message.str().c_str());
+				sendForcedTextMessage(playerID, sourceChannel, strStream.str().c_str());
 			} else {
 				bz_sendTextMessage(BZ_SERVER, playerID, "Incorrect match duration.");
 			}
@@ -264,11 +264,11 @@ bool mutedChatHelper::SlashCommand(int playerID, int sourceChannel, bz_ApiString
 			long int duration = strtol(params->get(0).c_str(), NULL, 10);
 
 			if(duration == 15 || duration == 20 || duration == 30) {
-				std::stringstream message;
+				std::stringstream strStream;
 
-				message << "I can play a " << duration << "-minute mixed official match";
+				strStream << "I can play a " << duration << "-minute mixed official match";
 
-				sendForcedTextMessage(playerID, sourceChannel, message.str().c_str());
+				sendForcedTextMessage(playerID, sourceChannel, strStream.str().c_str());
 			} else {
 				bz_sendTextMessage(BZ_SERVER, playerID, "Incorrect match duration.");
 			}
