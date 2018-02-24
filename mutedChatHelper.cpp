@@ -77,8 +77,6 @@ void mutedChatHelper::Init(const char* /*commandLine*/) {
 	Register(bz_eTickEvent);
 	Register(bz_ePlayerPartEvent);
 
-	bz_registerCustomSlashCommand("hello", this);
-	bz_registerCustomSlashCommand("hi", this);
 	bz_registerCustomSlashCommand("icanfm", this);
 	bz_registerCustomSlashCommand("icanfunmatch", this);
 	bz_registerCustomSlashCommand("icanoffi", this);
@@ -93,18 +91,11 @@ void mutedChatHelper::Init(const char* /*commandLine*/) {
 	bz_registerCustomSlashCommand("attack", this);
 	bz_registerCustomSlashCommand("def", this);
 	bz_registerCustomSlashCommand("defend", this);
-	bz_registerCustomSlashCommand("ok", this);
-	bz_registerCustomSlashCommand("okay", this);
-	bz_registerCustomSlashCommand("thanks", this);
-	bz_registerCustomSlashCommand("gj", this);
-	bz_registerCustomSlashCommand("gg", this);
 }
 
 void mutedChatHelper::Cleanup() {
 	Flush();
 
-	bz_removeCustomSlashCommand("hello");
-	bz_removeCustomSlashCommand("hi");
 	bz_removeCustomSlashCommand("icanfm");
 	bz_removeCustomSlashCommand("icanfunmatch");
 	bz_removeCustomSlashCommand("icanoffi");
@@ -119,11 +110,6 @@ void mutedChatHelper::Cleanup() {
 	bz_removeCustomSlashCommand("attack");
 	bz_removeCustomSlashCommand("def");
 	bz_removeCustomSlashCommand("defend");
-	bz_removeCustomSlashCommand("ok");
-	bz_removeCustomSlashCommand("okay");
-	bz_removeCustomSlashCommand("thanks");
-	bz_removeCustomSlashCommand("gj");
-	bz_removeCustomSlashCommand("gg");
 
 	Remove(bz_ePlayerJoinEvent);
 	Remove(bz_eRawChatMessageEvent);
@@ -142,7 +128,6 @@ void mutedChatHelper::Event(bz_EventData *eventData) {
 			bz_sendTextMessage(BZ_SERVER, joinEventData->playerID, "You are not permitted to chat due to being muted. However, you may use the following");
 			bz_sendTextMessage(BZ_SERVER, joinEventData->playerID, "slash commands to send specific game-related messages:");
 			bz_sendTextMessage(BZ_SERVER, joinEventData->playerID, " ");
-			bz_sendTextMessage(BZ_SERVER, joinEventData->playerID, "/hello [player]            -  Hello[, player]");
 			bz_sendTextMessage(BZ_SERVER, joinEventData->playerID, "/icanfm [duration]         -  I can play a [duration] fun match");
 			bz_sendTextMessage(BZ_SERVER, joinEventData->playerID, "/icanoffi [duration]       -  I can play a [duration] official match");
 			bz_sendTextMessage(BZ_SERVER, joinEventData->playerID, "/icanmixedoffi [duration]  -  I can play a [duration] mixed official match");
@@ -151,10 +136,6 @@ void mutedChatHelper::Event(bz_EventData *eventData) {
 			bz_sendTextMessage(BZ_SERVER, joinEventData->playerID, "/theirs                    -  Theirs!");
 			bz_sendTextMessage(BZ_SERVER, joinEventData->playerID, "/atk                       -  Attack!");
 			bz_sendTextMessage(BZ_SERVER, joinEventData->playerID, "/def                       -  Defend!");
-			bz_sendTextMessage(BZ_SERVER, joinEventData->playerID, "/ok                        -  Okay");
-			bz_sendTextMessage(BZ_SERVER, joinEventData->playerID, "/thanks                    -  Thanks");
-			bz_sendTextMessage(BZ_SERVER, joinEventData->playerID, "/gj                        -  Good job");
-			bz_sendTextMessage(BZ_SERVER, joinEventData->playerID, "/gg                        -  Good game");
 		}
 	} else if(eventData->eventType == bz_eRawChatMessageEvent) {
 		bz_ChatEventData_V1 *chatEventData = (bz_ChatEventData_V1 *) eventData;
@@ -199,25 +180,7 @@ void mutedChatHelper::Event(bz_EventData *eventData) {
 }
 
 bool mutedChatHelper::SlashCommand(int playerID, int sourceChannel, bz_ApiString command, bz_ApiString /* message */, bz_APIStringList* params) {
-	if(command == "hello" || command == "hi") {
-		if(params->size() == 0) {
-			sendForcedTextMessage(playerID, sourceChannel, "Hello");
-		} else if(params->size() == 1) {
-			bz_BasePlayerRecord *playerRecord = bz_getPlayerBySlotOrCallsign(params->get(0).c_str());
-
-			if(playerRecord != NULL) {
-				sendForcedTextMessage(playerID, sourceChannel, (std::string("Hello, ") + playerRecord->callsign.c_str()).c_str());
-
-				bz_freePlayerRecord(playerRecord);
-			} else {
-				bz_sendTextMessage(BZ_SERVER, playerID, "Player not found.");
-			}
-		} else {
-			bz_sendTextMessage(BZ_SERVER, playerID, "Incorrect command parameters.");
-		}
-
-		return true;
-	} else if(command == "icanfm" || command == "icanfunmatch") {
+	if(command == "icanfm" || command == "icanfunmatch") {
 		if(params->size() == 0) {
 			sendForcedTextMessage(playerID, sourceChannel, "I can play a fun match");
 		} else if(params->size() == 1) {
@@ -312,38 +275,6 @@ bool mutedChatHelper::SlashCommand(int playerID, int sourceChannel, bz_ApiString
 	} else if(command == "def" || command == "defend") {
 		if(params->size() == 0) {
 			sendForcedTextMessage(playerID, sourceChannel, "Defend!");
-		} else {
-			bz_sendTextMessage(BZ_SERVER, playerID, "Incorrect command parameters.");
-		}
-
-		return true;
-	} else if(command == "ok" || command == "okay") {
-		if(params->size() == 0) {
-			sendForcedTextMessage(playerID, sourceChannel, "Okay");
-		} else {
-			bz_sendTextMessage(BZ_SERVER, playerID, "Incorrect command parameters.");
-		}
-
-		return true;
-	} else if(command == "thanks") {
-		if(params->size() == 0) {
-			sendForcedTextMessage(playerID, sourceChannel, "Thanks");
-		} else {
-			bz_sendTextMessage(BZ_SERVER, playerID, "Incorrect command parameters.");
-		}
-
-		return true;
-	} else if(command == "gj") {
-		if(params->size() == 0) {
-			sendForcedTextMessage(playerID, sourceChannel, "Good job");
-		} else {
-			bz_sendTextMessage(BZ_SERVER, playerID, "Incorrect command parameters.");
-		}
-
-		return true;
-	} else if(command == "gg") {
-		if(params->size() == 0) {
-			sendForcedTextMessage(playerID, sourceChannel, "Good game");
 		} else {
 			bz_sendTextMessage(BZ_SERVER, playerID, "Incorrect command parameters.");
 		}
