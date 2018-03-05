@@ -91,6 +91,8 @@ void mutedChatHelper::Init(const char* /*commandLine*/) {
 	bz_registerCustomSlashCommand("attack", this);
 	bz_registerCustomSlashCommand("def", this);
 	bz_registerCustomSlashCommand("defend", this);
+	bz_registerCustomSlashCommand("mid", this);
+	bz_registerCustomSlashCommand("middle", this);
 }
 
 void mutedChatHelper::Cleanup() {
@@ -110,6 +112,8 @@ void mutedChatHelper::Cleanup() {
 	bz_removeCustomSlashCommand("attack");
 	bz_removeCustomSlashCommand("def");
 	bz_removeCustomSlashCommand("defend");
+	bz_removeCustomSlashCommand("mid");
+	bz_removeCustomSlashCommand("middle");
 
 	Remove(bz_ePlayerJoinEvent);
 	Remove(bz_eRawChatMessageEvent);
@@ -136,6 +140,7 @@ void mutedChatHelper::Event(bz_EventData *eventData) {
 			bz_sendTextMessage(BZ_SERVER, joinEventData->playerID, "/theirs                    -  Theirs!");
 			bz_sendTextMessage(BZ_SERVER, joinEventData->playerID, "/atk                       -  Attack!");
 			bz_sendTextMessage(BZ_SERVER, joinEventData->playerID, "/def                       -  Defend!");
+			bz_sendTextMessage(BZ_SERVER, joinEventData->playerID, "/mid                       -  Mid!");
 		}
 	} else if(eventData->eventType == bz_eRawChatMessageEvent) {
 		bz_ChatEventData_V1 *chatEventData = (bz_ChatEventData_V1 *) eventData;
@@ -180,6 +185,9 @@ void mutedChatHelper::Event(bz_EventData *eventData) {
 }
 
 bool mutedChatHelper::SlashCommand(int playerID, int sourceChannel, bz_ApiString command, bz_ApiString /* message */, bz_APIStringList* params) {
+	if(! bz_hasPerm(playerID, "SPAWN"))
+		return false;
+
 	if(command == "icanfm" || command == "icanfunmatch") {
 		if(params->size() == 0) {
 			sendForcedTextMessage(playerID, sourceChannel, "I can play a fun match");
@@ -275,6 +283,14 @@ bool mutedChatHelper::SlashCommand(int playerID, int sourceChannel, bz_ApiString
 	} else if(command == "def" || command == "defend") {
 		if(params->size() == 0) {
 			sendForcedTextMessage(playerID, sourceChannel, "Defend!");
+		} else {
+			bz_sendTextMessage(BZ_SERVER, playerID, "Incorrect command parameters.");
+		}
+
+		return true;
+	} else if(command == "mid" || command == "middle") {
+		if(params->size() == 0) {
+			sendForcedTextMessage(playerID, sourceChannel, "Mid!");
 		} else {
 			bz_sendTextMessage(BZ_SERVER, playerID, "Incorrect command parameters.");
 		}
