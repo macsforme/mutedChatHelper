@@ -35,8 +35,10 @@ protected:
 	};
 
 	std::map<int, std::vector<PendingMessage> > pendingMessages;
+	std::vector<int> manuallyMutedPlayers;
 
 	virtual void sendForcedTextMessage(int from, int to, const char* message);
+	virtual bool isPlayerManuallyMuted(int playerID);
 
 public:
 	virtual const char* Name() { return "Muted Chat Helper"; }
@@ -69,6 +71,14 @@ void mutedChatHelper::sendForcedTextMessage(int from, int to, const char* messag
 	pendingMessages[from].push_back(pendingMessage);
 }
 
+bool mutedChatHelper::isPlayerManuallyMuted(int playerID) {
+	for(unsigned int i = 0; i < manuallyMutedPlayers.size(); ++i)
+		if(manuallyMutedPlayers[i] == playerID)
+			return true;
+
+	return false;
+}
+
 void mutedChatHelper::Init(const char* /*commandLine*/) {
 	bz_debugMessage(4,"mutedChatHelper plugin loaded");
 
@@ -76,7 +86,9 @@ void mutedChatHelper::Init(const char* /*commandLine*/) {
 	Register(bz_eRawChatMessageEvent);
 	Register(bz_eTickEvent);
 	Register(bz_ePlayerPartEvent);
+	Register(bz_eUnmuteEvent);
 
+	bz_registerCustomSlashCommand("mute", this);
 	bz_registerCustomSlashCommand("icanfm", this);
 	bz_registerCustomSlashCommand("icanfunmatch", this);
 	bz_registerCustomSlashCommand("icanoffi", this);
@@ -98,6 +110,7 @@ void mutedChatHelper::Init(const char* /*commandLine*/) {
 void mutedChatHelper::Cleanup() {
 	Flush();
 
+	bz_removeCustomSlashCommand("mute");
 	bz_removeCustomSlashCommand("icanfm");
 	bz_removeCustomSlashCommand("icanfunmatch");
 	bz_removeCustomSlashCommand("icanoffi");
@@ -119,6 +132,7 @@ void mutedChatHelper::Cleanup() {
 	Remove(bz_eRawChatMessageEvent);
 	Remove(bz_eTickEvent);
 	Remove(bz_ePlayerPartEvent);
+	Remove(bz_eUnmuteEvent);
 
 	bz_debugMessage(4,"mutedChatHelper plugin unloaded");
 }
@@ -181,6 +195,25 @@ void mutedChatHelper::Event(bz_EventData *eventData) {
 		if(pendingMessages.find(partEventData->playerID) != pendingMessages.end())
 			// remove pending messages from this player slot
 			pendingMessages.erase(pendingMessages.find(partEventData->playerID));
+
+		for(unsigned int i = 0; i < manuallyMutedPlayers.size(); ++i) {
+			if(manuallyMutedPlayers[i] == partEventData->playerID) {
+				// remove this player from the manually muted player list
+				manuallyMutedPlayers.erase(manuallyMutedPlayers.begin() + i);
+
+				break;
+			}
+		}
+	} else if(eventData->eventType == bz_eUnmuteEvent) {
+		bz_MuteEventData_V1 *muteEventData = (bz_MuteEventData_V1 *) eventData;
+
+		for(unsigned int i = 0; i < manuallyMutedPlayers.size(); ++i) {
+			if(manuallyMutedPlayers[i] == muteEventData->victimID) {
+				manuallyMutedPlayers.erase(manuallyMutedPlayers.begin() + i);
+
+				break;
+			}
+		}
 	}
 }
 
@@ -188,7 +221,41 @@ bool mutedChatHelper::SlashCommand(int playerID, int sourceChannel, bz_ApiString
 	if(! bz_hasPerm(playerID, "SPAWN"))
 		return false;
 
-	if(command == "icanfm" || command == "icanfunmatch") {
+	if(command == "mute") {
+		if(params->size() != 1 || ! bz_hasPerm(playerID, "MUTE"))
+			return false;
+
+		bz_BasePlayerRecord *playerRecord = bz_getPlayerBySlotOrCallsign(params->get(0).c_str());
+
+		if(playerRecord == NULL)
+			return false;
+
+		for(unsigned int i = 0; i < manuallyMutedPlayers.size(); ++i) {
+			if(manuallyMutedPlayers[i] == playerRecord->playerID) {
+				manuallyMutedPlayers.erase(manuallyMutedPlayers.begin() + i);
+
+				break;
+			}
+		}
+
+		manuallyMutedPlayers.push_back(playerRecord->playerID);
+
+		// allow the regular mute command to execute if necessary
+		if(bz_hasPerm(playerRecord->playerID, "TALK")) {
+			bz_freePlayerRecord(playerRecord);
+
+			return false;
+		} else {
+			bz_sendTextMessage(BZ_SERVER, playerID, (std::string("Chat slash commands for muted player \"") + playerRecord->callsign.c_str() + "\" have been disabled.").c_str());
+
+			bz_freePlayerRecord(playerRecord);
+
+			return true;
+		}
+	} else if(command == "icanfm" || command == "icanfunmatch") {
+		if(isPlayerManuallyMuted(playerID))
+			return false;
+
 		if(params->size() == 0) {
 			sendForcedTextMessage(playerID, sourceChannel, "I can play a fun match");
 		} else if(params->size() == 1) {
@@ -209,6 +276,9 @@ bool mutedChatHelper::SlashCommand(int playerID, int sourceChannel, bz_ApiString
 
 		return true;
 	} else if(command == "icanoffi" || command == "icanofficial") {
+		if(isPlayerManuallyMuted(playerID))
+			return false;
+
 		if(params->size() == 0) {
 			sendForcedTextMessage(playerID, sourceChannel, "I can play an official match");
 		} else if(params->size() == 1) {
@@ -229,6 +299,9 @@ bool mutedChatHelper::SlashCommand(int playerID, int sourceChannel, bz_ApiString
 
 		return true;
 	} else if(command == "icanmixedoffi" || command == "icanmixedofficial") {
+		if(isPlayerManuallyMuted(playerID))
+			return false;
+
 		if(params->size() == 0) {
 			sendForcedTextMessage(playerID, sourceChannel, "I can play a mixed official match");
 		} else if(params->size() == 1) {
@@ -249,6 +322,9 @@ bool mutedChatHelper::SlashCommand(int playerID, int sourceChannel, bz_ApiString
 
 		return true;
 	} else if(command == "icantmatch" || command == "icannotmatch") {
+		if(isPlayerManuallyMuted(playerID))
+			return false;
+
 		if(params->size() == 0) {
 			sendForcedTextMessage(playerID, sourceChannel, "I cannot match right now");
 		} else {
@@ -257,6 +333,9 @@ bool mutedChatHelper::SlashCommand(int playerID, int sourceChannel, bz_ApiString
 
 		return true;
 	} else if(command == "ours") {
+		if(isPlayerManuallyMuted(playerID))
+			return false;
+
 		if(params->size() == 0) {
 			sendForcedTextMessage(playerID, sourceChannel, "Ours!");
 		} else {
@@ -265,6 +344,9 @@ bool mutedChatHelper::SlashCommand(int playerID, int sourceChannel, bz_ApiString
 
 		return true;
 	} else if(command == "theirs") {
+		if(isPlayerManuallyMuted(playerID))
+			return false;
+
 		if(params->size() == 0) {
 			sendForcedTextMessage(playerID, sourceChannel, "Theirs!");
 		} else {
@@ -273,6 +355,9 @@ bool mutedChatHelper::SlashCommand(int playerID, int sourceChannel, bz_ApiString
 
 		return true;
 	} else if(command == "atk" || command == "attack") {
+		if(isPlayerManuallyMuted(playerID))
+			return false;
+
 		if(params->size() == 0) {
 			sendForcedTextMessage(playerID, sourceChannel, "Attack!");
 		} else {
@@ -281,6 +366,9 @@ bool mutedChatHelper::SlashCommand(int playerID, int sourceChannel, bz_ApiString
 
 		return true;
 	} else if(command == "def" || command == "defend") {
+		if(isPlayerManuallyMuted(playerID))
+			return false;
+
 		if(params->size() == 0) {
 			sendForcedTextMessage(playerID, sourceChannel, "Defend!");
 		} else {
@@ -289,6 +377,9 @@ bool mutedChatHelper::SlashCommand(int playerID, int sourceChannel, bz_ApiString
 
 		return true;
 	} else if(command == "mid" || command == "middle") {
+		if(isPlayerManuallyMuted(playerID))
+			return false;
+
 		if(params->size() == 0) {
 			sendForcedTextMessage(playerID, sourceChannel, "Mid!");
 		} else {
